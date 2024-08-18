@@ -1,9 +1,10 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.Iterator;
+import java.sql.Types;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class InsertQueryGenerator {
 
@@ -88,7 +89,7 @@ public class InsertQueryGenerator {
 
         // LinkedHashMap to maintain insertion order for DB columns
         Map<String, String> columnMap = new LinkedHashMap<>();
-        Map<String, String> preparedStatementMap = new LinkedHashMap<>();
+        StringBuilder preparedStatementScript = new StringBuilder();
 
         // Build the column map and prepared statement map
         dbRelationNode.fields().forEachRemaining(dbField -> {
@@ -97,35 +98,36 @@ public class InsertQueryGenerator {
             String columnName = dbFieldProperties.get("dbName").asText();
             String dbType = dbFieldProperties.get("dbType").asText();
 
-            // Determine the path in the input JSON
-            String[] path = fieldName.split("\\.");
-            JsonNode currentNode = inputNode;
-            for (String segment : path) {
-                currentNode = currentNode.path(segment);
-            }
-
             // Generate the column map entry
             columnMap.put(columnName, "?" /* Placeholder for prepared statement */);
 
-            // Generate the prepared statement map entry
+            // Generate the prepared statement logic
             String getterMethod = "get" + capitalize(fieldName);
-            String setterMethod = determineSetterMethod(dbType);
-            preparedStatementMap.put(columnName, "ps." + setterMethod + "(Constants.<index>, deliveryContentAudit." + getterMethod + "());");
+            int index = columnMap.size(); // Keep track of the parameter index
+
+            // Handle Bytes type differently with compression logic
+            if ("bytes".equalsIgnoreCase(dbType)) {
+                preparedStatementScript.append(String.format("byte[] compressedValue = getCompressedValue(deliveryContentAudit.get%s());\n", getterMethod))
+                        .append(String.format("if (Objects.nonNull(compressedValue)) {\n    ps.setBytes(Constants.%d, compressedValue);\n", index))
+                        .append(String.format("} else {\n    ps.setNull(Constants.%d, Types.BLOB);\n}\n", index));
+            } else {
+                // Use DAOUtil for other types
+                String setterMethod = determineDaoUtilMethod(dbType);
+                preparedStatementScript.append(String.format("DAOUtil.%s(ps, Constants.%d, deliveryContentAudit.get%s());\n", setterMethod, index, getterMethod));
+            }
         });
+
+        // Add the CREATOR_ID field at the end
+        columnMap.put("CREATOR_ID", "?");
+        int creatorIndex = columnMap.size();
+
+        // Add CREATOR_ID to the prepared statement script
+        preparedStatementScript.append(String.format("DAOUtil.setString(ps, Constants.%d, Constants.CREATOR_ID);\n", creatorIndex));
 
         // Generate the INSERT query
         String columns = String.join(", ", columnMap.keySet());
         String values = String.join(", ", columnMap.values());
         String insertQuery = "INSERT INTO T_DELIVER_CONTENT (" + columns + ") VALUES (" + values + ");";
-
-        // Generate the PreparedStatement script
-        StringBuilder preparedStatementScript = new StringBuilder();
-        int index = 1;
-        for (Map.Entry<String, String> entry : preparedStatementMap.entrySet()) {
-            String psLine = entry.getValue().replace("<index>", String.valueOf(index));
-            preparedStatementScript.append(psLine).append("\n");
-            index++;
-        }
 
         // Output the results
         System.out.println("Generated INSERT Query:");
@@ -142,8 +144,8 @@ public class InsertQueryGenerator {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
-    // Determine the appropriate PreparedStatement setter method
-    public static String determineSetterMethod(String dbType) {
+    // Determine the appropriate DAOUtil method
+    public static String determineDaoUtilMethod(String dbType) {
         switch (dbType.toLowerCase()) {
             case "int":
                 return "setInt";
@@ -154,5 +156,14 @@ public class InsertQueryGenerator {
             default:
                 throw new IllegalArgumentException("Unsupported DB type: " + dbType);
         }
+    }
+
+    // Sample method to demonstrate compression logic
+    public static byte[] getCompressedValue(String input) {
+        // Replace with actual compression logic
+        if (input == null) {
+            return null;
+        }
+        return input.getBytes(); // Simulating compression
     }
 }
