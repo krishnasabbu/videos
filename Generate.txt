@@ -1,0 +1,111 @@
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
+
+public class DynamicValidationScriptGenerator {
+
+    public static void main(String[] args) {
+        // Example JSON input
+        String jsonInput = """
+        {
+          "DeliveryContent": {
+            "contentType": {
+               "type": "String",
+               "mandatory": true
+            },
+            "alertText": {
+               "type": "String",
+               "mandatory": true
+            },
+            "messageTypeId": {
+               "type": "String",
+               "mandatory": false
+            }
+          },
+          "DeliveryMetadata": {
+             "uowId": {
+               "type": "String",
+               "mandatory": true
+            },
+            "sorUowId": {
+               "type": "String",
+               "mandatory": true
+            },
+            "inboundUowId": {
+               "type": "String",
+               "mandatory": true
+            }
+          }
+        }
+        """;
+
+        try {
+            generateValidationScript(jsonInput);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void generateValidationScript(String jsonInput) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode rootNode = mapper.readTree(jsonInput);
+
+        StringBuilder script = new StringBuilder();
+
+        // Generate null checks for outer objects
+        rootNode.fieldNames().forEachRemaining(outerField -> {
+            script.append("if (Objects.isNull(deliveryContentAudit.get")
+                    .append(outerField)
+                    .append("())) {\n")
+                    .append("    throw new ApplicationException(\"")
+                    .append(capitalize(outerField.replaceAll("([a-z])([A-Z]+)", "$1 $2")))
+                    .append(" is required but missing\");\n")
+                    .append("}\n\n");
+        });
+
+        // Iterate over each main object (DeliveryContent, DeliveryMetadata)
+        Iterator<Map.Entry<String, JsonNode>> fields = rootNode.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> section = fields.next();
+            String sectionName = section.getKey();
+            JsonNode sectionFields = section.getValue();
+
+            // Iterate over each field within the section
+            Iterator<Map.Entry<String, JsonNode>> sectionFieldIterator = sectionFields.fields();
+            while (sectionFieldIterator.hasNext()) {
+                Map.Entry<String, JsonNode> fieldEntry = sectionFieldIterator.next();
+                String fieldName = fieldEntry.getKey();
+                JsonNode fieldProperties = fieldEntry.getValue();
+
+                boolean isMandatory = fieldProperties.get("mandatory").asBoolean();
+
+                if (isMandatory) {
+                    // Generate the validation logic
+                    script.append("if (Objects.isNull(deliveryContentAudit.get")
+                            .append(sectionName)
+                            .append("().get")
+                            .append(capitalize(fieldName))
+                            .append("())) {\n")
+                            .append("    throw new ApplicationException(\"")
+                            .append(capitalize(fieldName.replaceAll("([a-z])([A-Z]+)", "$1 $2"))) // Add spaces between camel case words
+                            .append(" is required but missing\");\n")
+                            .append("}\n\n");
+                }
+            }
+        }
+
+        // Print the generated script
+        System.out.println(script.toString());
+    }
+
+    // Utility method to capitalize the first letter
+    public static String capitalize(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+}
