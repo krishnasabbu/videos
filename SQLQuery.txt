@@ -1,0 +1,158 @@
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class InsertQueryGenerator {
+
+    public static void main(String[] args) {
+        // Input JSON (First one)
+        String inputJson = """
+        {
+          "DeliveryContent": {
+            "contentType": {
+               "type": "String",
+               "mandatory": true
+            },
+            "alertText": {
+               "type": "String",
+               "mandatory": true
+            },
+            "messageTypeId": {
+               "type": "String",
+               "mandatory": false
+            }
+          },
+          "DeliveryMetadata": {
+            "uowId": {
+               "type": "String",
+               "mandatory": true
+            },
+            "sorUowId": {
+               "type": "String",
+               "mandatory": true
+            },
+            "inboundUowId": {
+               "type": "String",
+               "mandatory": true
+            }
+          }
+        }
+        """;
+
+        // DB relation JSON (Second one)
+        String dbRelationJson = """
+        {
+          "sorUowId": {
+            "dbName": "SOR_UOWID",
+            "dbType": "String"
+          },
+          "uowId": {
+            "dbName": "UOW_ID",
+            "dbType": "String"
+          },
+          "inboundUowId": {
+            "dbName": "INBOUND_UOW_ID",
+            "dbType": "String"
+          },
+          "contentType": {
+            "dbName": "CONTENT_TYPE",
+            "dbType": "String"
+          },
+          "alertText": {
+            "dbName": "ALERT_TEXT",
+            "dbType": "Bytes"
+          },
+          "messageTypeId": {
+            "dbName": "MESSAGE_TYPE_ID",
+            "dbType": "Int"
+          }
+        }
+        """;
+
+        try {
+            generateInsertQueryAndPreparedStatement(inputJson, dbRelationJson);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void generateInsertQueryAndPreparedStatement(String inputJson, String dbRelationJson) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Parse the JSON input and DB relation
+        JsonNode inputNode = mapper.readTree(inputJson);
+        JsonNode dbRelationNode = mapper.readTree(dbRelationJson);
+
+        // LinkedHashMap to maintain insertion order for DB columns
+        Map<String, String> columnMap = new LinkedHashMap<>();
+        Map<String, String> preparedStatementMap = new LinkedHashMap<>();
+
+        // Build the column map and prepared statement map
+        dbRelationNode.fields().forEachRemaining(dbField -> {
+            String fieldName = dbField.getKey();
+            JsonNode dbFieldProperties = dbField.getValue();
+            String columnName = dbFieldProperties.get("dbName").asText();
+            String dbType = dbFieldProperties.get("dbType").asText();
+
+            // Determine the path in the input JSON
+            String[] path = fieldName.split("\\.");
+            JsonNode currentNode = inputNode;
+            for (String segment : path) {
+                currentNode = currentNode.path(segment);
+            }
+
+            // Generate the column map entry
+            columnMap.put(columnName, "?" /* Placeholder for prepared statement */);
+
+            // Generate the prepared statement map entry
+            String getterMethod = "get" + capitalize(fieldName);
+            String setterMethod = determineSetterMethod(dbType);
+            preparedStatementMap.put(columnName, "ps." + setterMethod + "(Constants.<index>, deliveryContentAudit." + getterMethod + "());");
+        });
+
+        // Generate the INSERT query
+        String columns = String.join(", ", columnMap.keySet());
+        String values = String.join(", ", columnMap.values());
+        String insertQuery = "INSERT INTO T_DELIVER_CONTENT (" + columns + ") VALUES (" + values + ");";
+
+        // Generate the PreparedStatement script
+        StringBuilder preparedStatementScript = new StringBuilder();
+        int index = 1;
+        for (Map.Entry<String, String> entry : preparedStatementMap.entrySet()) {
+            String psLine = entry.getValue().replace("<index>", String.valueOf(index));
+            preparedStatementScript.append(psLine).append("\n");
+            index++;
+        }
+
+        // Output the results
+        System.out.println("Generated INSERT Query:");
+        System.out.println(insertQuery);
+        System.out.println("\nGenerated PreparedStatement Script:");
+        System.out.println(preparedStatementScript.toString());
+    }
+
+    // Utility method to capitalize the first letter
+    public static String capitalize(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
+    // Determine the appropriate PreparedStatement setter method
+    public static String determineSetterMethod(String dbType) {
+        switch (dbType.toLowerCase()) {
+            case "int":
+                return "setInt";
+            case "string":
+                return "setString";
+            case "bytes":
+                return "setBytes";
+            default:
+                throw new IllegalArgumentException("Unsupported DB type: " + dbType);
+        }
+    }
+}
