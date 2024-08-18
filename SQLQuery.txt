@@ -166,4 +166,25 @@ public class InsertQueryGenerator {
         }
         return input.getBytes(); // Simulating compression
     }
+	
+	public static String buildGetterMethod(JsonNode inputNode, String fieldName) {
+    // This method dynamically constructs the getter chain like "getDeliveryMetadata().getSorUowId()"
+    String[] parts = fieldName.split("(?=[A-Z])"); // Splits on capital letters like "sorUowId"
+    StringBuilder getterChain = new StringBuilder("deliveryContentAudit");
+
+    // Traverse the JSON structure to determine where the field is nested
+    JsonNode currentNode = inputNode;
+    for (String part : parts) {
+        if (currentNode.has(part)) {
+            currentNode = currentNode.get(part);
+            getterChain.append(".get").append(capitalize(part)).append("()");
+        }
+    }
+    return getterChain.toString();
+}
+
+public static String getIndexConstant(int index) {
+        String[] constants = {"ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN"};
+        return constants[index - 1]; // Adjust for 0-based index
+    }
 }
