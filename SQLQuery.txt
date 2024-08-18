@@ -168,19 +168,42 @@ public class InsertQueryGenerator {
     }
 	
 	public static String buildGetterMethod(JsonNode inputNode, String fieldName) {
-    // This method dynamically constructs the getter chain like "getDeliveryMetadata().getSorUowId()"
-    String[] parts = fieldName.split("(?=[A-Z])"); // Splits on capital letters like "sorUowId"
     StringBuilder getterChain = new StringBuilder("deliveryContentAudit");
+    buildGetterChain(inputNode, fieldName, getterChain);
+    return getterChain.toString();
+}
 
-    // Traverse the JSON structure to determine where the field is nested
-    JsonNode currentNode = inputNode;
-    for (String part : parts) {
-        if (currentNode.has(part)) {
-            currentNode = currentNode.get(part);
-            getterChain.append(".get").append(capitalize(part)).append("()");
+private static boolean buildGetterChain(JsonNode currentNode, String fieldName, StringBuilder getterChain) {
+    if (currentNode.has(fieldName)) {
+        // We found the target field, add the getter to the chain
+        getterChain.append(".get").append(capitalize(fieldName)).append("()");
+        return true;
+    }
+
+    // Traverse deeper into nested objects
+    for (Iterator<Map.Entry<String, JsonNode>> it = currentNode.fields(); it.hasNext(); ) {
+        Map.Entry<String, JsonNode> entry = it.next();
+        JsonNode childNode = entry.getValue();
+
+        if (childNode.isObject()) {
+            getterChain.append(".get").append(capitalize(entry.getKey())).append("()");
+
+            boolean found = buildGetterChain(childNode, fieldName, getterChain);
+
+            if (found) {
+                return true;
+            } else {
+                // If the field wasn't found in this path, backtrack by removing the added part of the chain
+                getterChain.setLength(getterChain.length() - (".get".length() + capitalize(entry.getKey()).length() + "()".length()));
+            }
         }
     }
-    return getterChain.toString();
+    return false;
+}
+
+private static String capitalize(String input) {
+    if (input == null || input.isEmpty()) return input;
+    return input.substring(0, 1).toUpperCase() + input.substring(1);
 }
 
 public static String getIndexConstant(int index) {
