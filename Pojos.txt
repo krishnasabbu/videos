@@ -1,0 +1,123 @@
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.squareup.javapoet.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import javax.lang.model.element.Modifier;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+public class DynamicPojoGenerator {
+
+    public static void main(String[] args) throws IOException {
+        String json = """
+                {
+                  "DeliveryContent": {
+                    "contentType": {
+                       "type": "String",
+                       "mandatory": true
+                    }
+                  },
+                  "DeliveryMetadata": {
+                     "uowid": {
+                       "type": "String",
+                       "mandatory": true
+                    }
+                  }
+                }
+                """;
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(json);
+
+        // Generate the POJOs
+        Map<String, Boolean> mandatoryFields = generatePojos(rootNode);
+
+        // Generate the dynamic audit class
+        generateAuditClass(rootNode);
+
+        // Print the mandatory fields
+        System.out.println(mandatoryFields);
+    }
+
+    private static Map<String, Boolean> generatePojos(JsonNode rootNode) throws IOException {
+        Map<String, Boolean> mandatoryFieldsMap = new HashMap<>();
+
+        Iterator<String> classNames = rootNode.fieldNames();
+
+        while (classNames.hasNext()) {
+            String className = classNames.next();
+            JsonNode classNode = rootNode.path(className);
+
+            TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className)
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(Getter.class)
+                    .addAnnotation(Setter.class);
+
+            for (String fieldName : classNode.fieldNames()) {
+                JsonNode fieldNode = classNode.path(fieldName);
+                String fieldType = fieldNode.path("type").asText("String");
+                boolean mandatory = fieldNode.path("mandatory").asBoolean(false);
+
+                // Determine the field type (default to String)
+                ClassName fieldClass = ClassName.get("java.lang", fieldType);
+
+                // Add the field to the class
+                classBuilder.addField(FieldSpec.builder(fieldClass, fieldName, Modifier.PRIVATE).build());
+
+                // Store mandatory field information
+                mandatoryFieldsMap.put(fieldName, mandatory);
+            }
+
+            // Build the class
+            TypeSpec pojoClass = classBuilder.build();
+
+            // Generate the class
+            JavaFile javaFile = JavaFile.builder("com.example.generated", pojoClass)
+                    .build();
+
+            // Write the file to the specified directory
+            javaFile.writeTo(new File("src/main/java"));
+        }
+
+        return mandatoryFieldsMap;
+    }
+
+    private static void generateAuditClass(JsonNode rootNode) throws IOException {
+        TypeSpec.Builder auditClassBuilder = TypeSpec.classBuilder("DeliveryContentAudit")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(Getter.class)
+                .addAnnotation(Setter.class);
+
+        Iterator<String> classNames = rootNode.fieldNames();
+
+        while (classNames.hasNext()) {
+            String className = classNames.next();
+            ClassName fieldType = ClassName.get("com.example.generated", className);
+
+            // Add each class as a field to the audit class
+            auditClassBuilder.addField(fieldType, decapitalize(className), Modifier.PRIVATE);
+        }
+
+        // Build the audit class
+        TypeSpec auditClass = auditClassBuilder.build();
+
+        // Generate the class
+        JavaFile javaFile = JavaFile.builder("com.example.generated", auditClass)
+                .build();
+
+        // Write the file to the specified directory
+        javaFile.writeTo(new File("src/main/java"));
+    }
+
+    private static String decapitalize(String className) {
+        if (className == null || className.isEmpty()) {
+            return className;
+        }
+        return className.substring(0, 1).toLowerCase() + className.substring(1);
+    }
+}
