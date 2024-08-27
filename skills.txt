@@ -1,0 +1,36 @@
+Short-Term Goals:
+
+Develop AI/ML Expertise: Transition from an experienced Java developer to a specialist in AI/ML, utilizing my programming background to build intelligent systems with cloud platforms such as Azure and Google Cloud.
+
+Implement Azure AI/ML Solutions: Leverage my skills as a Microsoft Certified Azure Solution Architect to deploy AI/ML solutions on Azure, enhancing my capability to design and implement scalable AI systems.
+
+Expand Skill Set: Enhance my knowledge of SQL and Python by gaining a deeper understanding of AI/ML algorithms and frameworks.
+
+Contribute to Innovative Projects: Use AI/ML techniques, particularly with Azure tools, to improve web applications, creating smarter and more responsive systems.
+
+Maintain Market Competitiveness: Acquire expertise in AI/ML within the Azure ecosystem to stay relevant and competitive, opening doors to opportunities in data science and cloud-based AI solutions.
+
+
+Long-Term Goals:
+
+Career Advancement: Aim for leadership roles in tech-driven projects, focusing on driving the adoption of AI/ML technologies within my organization and beyond, with an emphasis on cloud-based solutions like Azure.
+
+Innovation and Problem-Solving: Utilize AI/ML, especially Azure AI/ML tools, to address complex business challenges and drive innovation in both current and future roles.
+
+Become an AI/ML Architect: Aspire to become an AI/ML architect specializing in Azure-based solutions, leading transformative technology projects, and mentoring the next generation of developers in this field.
+
+Skills and Experiences:
+
+Extensive Software Development Experience: With over 14 years in software development, I possess a comprehensive understanding of the full software lifecycle, equipping me to handle complex AI/ML projects effectively.
+
+Expertise in Java and Microservices: My proficiency in Java and Spring Boot, along with experience in designing and implementing microservices, provides a solid foundation for developing scalable AI/ML applications.
+
+Cloud Computing Proficiency: As a Microsoft Certified Azure Solutions Architect, I have significant expertise in cloud technologies, particularly Azure, which is essential for deploying AI/ML solutions at scale.
+
+Leadership and Team Management: I have a proven track record of leading teams in the development and deployment of enterprise-grade applications, enabling effective collaboration and leadership in AI/ML projects.
+
+Hackathon 2024 Winner: Being part of the winning team in Hackathon 2024, where we created a voice fraud detection solution using AI and ML, highlights my ability to innovate and apply AI/ML techniques to real-world problems.
+
+Domain Experience in Banking and Market Research: My background in the banking and market research sectors provides me with the insights needed to apply AI/ML techniques to industry-specific challenges, enhancing the relevance and impact of solutions.
+
+Hands-On Knowledge of AI/ML Tools: I have practical experience with AI/ML tools such as Azure ML, Python ML modules, and cutting-edge technologies like ChatGPT, LangChain, and GenAI, positioning me to quickly master and apply advanced AI/ML concepts.
