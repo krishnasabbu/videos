@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNode } from "@craftjs/core";
 
-export const FolderInput = ({ folderName, userEditable = true }) => {
+export const FolderInput = ({ folderPath, userEditable = true }) => {
   const {
     connectors: { connect, drag },
     selected,
@@ -13,13 +13,13 @@ export const FolderInput = ({ folderName, userEditable = true }) => {
 
   const [editable, setEditable] = useState(false);
 
-  useEffect(() => {
-    if (!selected) {
-      if (userEditable) {
-        setEditable(false);
-      }
+  const handleFolderSelect = (e) => {
+    const files = e.target.files;
+    if (files.length > 0) {
+      const path = files[0].webkitRelativePath.split("/")[0];
+      setProp((props) => (props.folderPath = path), 500);
     }
-  }, [selected, userEditable]);
+  };
 
   return (
     <div
@@ -27,20 +27,32 @@ export const FolderInput = ({ folderName, userEditable = true }) => {
       onClick={() => selected && userEditable && setEditable(true)}
     >
       {userEditable ? (
-        <input
-          type="file"
-          webkitdirectory="true"
-          directory="true"
-          onChange={(e) =>
-            setProp(
-              (props) => (props.folderName = e.target.files[0]?.webkitRelativePath || ""),
-              500
-            )
-          }
-          style={{ display: "block", margin: "10px 0" }}
-        />
+        <>
+          <label
+            htmlFor="folderInput"
+            style={{
+              display: "inline-block",
+              padding: "6px 12px",
+              cursor: "pointer",
+              backgroundColor: "#007bff",
+              color: "white",
+              borderRadius: "4px",
+              textAlign: "center",
+            }}
+          >
+            Select Folder
+          </label>
+          <input
+            type="file"
+            id="folderInput"
+            style={{ display: "none" }}
+            webkitdirectory="true"
+            directory="true"
+            onChange={handleFolderSelect}
+          />
+        </>
       ) : (
-        <p>{folderName}</p>
+        <p>{folderPath}</p>
       )}
     </div>
   );
@@ -49,19 +61,19 @@ export const FolderInput = ({ folderName, userEditable = true }) => {
 const FolderInputSettings = () => {
   const {
     actions: { setProp },
-    folderName,
+    folderPath,
   } = useNode((node) => ({
-    folderName: node.data.props.folderName,
+    folderPath: node.data.props.folderPath,
   }));
 
   return (
     <label>
-      Folder Name
+      Folder Path
       <input
         type="text"
-        value={folderName || ""}
+        value={folderPath || ""}
         onChange={(e) => {
-          setProp((props) => (props.folderName = e.target.value), 1000);
+          setProp((props) => (props.folderPath = e.target.value), 1000);
         }}
       />
     </label>
@@ -69,7 +81,7 @@ const FolderInputSettings = () => {
 };
 
 export const FolderInputDefaultProps = {
-  folderName: "My Folder",
+  folderPath: "",
 };
 
 FolderInput.craft = {
