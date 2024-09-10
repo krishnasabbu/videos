@@ -2,34 +2,95 @@ import React from "react";
 import { DiCss3, DiJavascript, DiNpm, DiJava } from "react-icons/di";
 import { FaList, FaRegFolder, FaRegFolderOpen, FaFileCode, FaFileAlt } from "react-icons/fa";
 import TreeView from "react-accessible-treeview";
+import AceEditor from 'react-ace';
 
-const CustomTreeView = ({ data }) => (
-  <div>
-    <div className="directory">
-      <TreeView
-        data={data}
-        aria-label="directory tree"
-        nodeRenderer={({
-          element,
-          isBranch,
-          isExpanded,
-          getNodeProps,
-          level,
-        }) => (
-          <div {...getNodeProps()} style={{ paddingLeft: 20 * (level - 1) }}>
-            {isBranch ? (
-              <FolderIcon isOpen={isExpanded} />
-            ) : (
-              <FileIcon filename={element.name} />
-            )}
+import "ace-builds/src-noconflict/mode-java";
+import 'ace-builds/src-noconflict/mode-javascript';
+import 'ace-builds/src-noconflict/theme-github';
 
-            {element.name}
-          </div>
-        )}
-      />
-    </div>
-  </div>
-);
+const CustomTreeView = ({ data }) => {
+    console.log("data == "+JSON.stringify(data));
+    const [editorContent, setEditorContent] = React.useState(null);
+
+    // Handler for file click
+    const onFileSelect = (node) => {
+      // Check if the node has content (it's a file, not a folder)
+      console.log("node ... "+JSON.stringify(node));
+      handleFileClick(node.name)
+    }
+
+    const handleFileClick = async (name) => {
+        try {
+          const response = await fetch('http://localhost:8080/micro/content', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              // Replace with actual payload data
+              data: name
+            }),
+          });
+    
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+      
+          const text = await response.text();
+          setEditorContent(text);
+        } catch (error) {
+          console.error('API call failed:', error);
+          // Handle error here
+        }
+      };
+
+    return (
+        <div>
+            <div className="directory">
+                <TreeView
+                    data={data}
+                    aria-label="directory tree"
+                    nodeRenderer={({
+                    element,
+                    isBranch,
+                    isExpanded,
+                    getNodeProps,
+                    level,
+                    }) => (
+                    <div {...getNodeProps()} style={{ paddingLeft: 20 * (level - 1) }}>
+                        {isBranch ? (
+                        <FolderIcon isOpen={isExpanded} />
+                        ) : (
+                        <FileIcon filename={element.name} />
+                        )}
+                        <span onClick={() => onFileSelect(element)}>{element.name}</span>
+                    </div>
+                    )}
+                />
+            </div>
+            <div style={{ width: '70%', padding: '10px' }}>
+                <h3>File Editor</h3>
+                {editorContent ? (
+                <AceEditor
+                    mode="java" // You can dynamically set the mode based on the file type
+                    theme="github"
+                    name="file-editor"
+                    value={editorContent}
+                    onChange={(newContent) => {
+                    // Handle content changes if needed
+                    setEditorContent(editorContent);
+                    }}
+                    editorProps={{ $blockScrolling: false }}
+                    style={{ width: '100%', height: '500px' }}
+                />
+                ) : (
+                <p>Select a file to view its content</p>
+                )}
+            </div>
+        </div>
+    );
+  
+};
 
 const FolderIcon = ({ isOpen }) => 
   isOpen ? (

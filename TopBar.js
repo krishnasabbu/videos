@@ -11,12 +11,15 @@ import {
 import { useState } from "react";
 import { Panel } from "./Panel";
 import { Popup } from "./Popup";
+import CustomTreeView from "./CustomTreeView";
+import { flattenTree } from "react-accessible-treeview";
 
 const EditButton = ({}) => {
   const { actions, query, enabled } = useEditor((state) => ({
     enabled: state.options.enabled,
   }));
 
+  
   return (
     <button
       className={`text-white ${
@@ -56,6 +59,8 @@ const TopBarButton = ({ children, className, ...props }) => {
 
 
 export const TopBar = () => {
+
+  
   const [showPopup, setShowPopup] = useState(false);
   const [folderData, setFolderData] = useState([]);
 
@@ -83,7 +88,9 @@ export const TopBar = () => {
   
       const data = await response.json();
       console.log(data);
-      setFolderData(data);
+      const customData = flattenTree(data);
+      console.log(customData);
+      setFolderData(customData);
       setShowPopup(true);
     } catch (error) {
       console.error('API call failed:', error);
@@ -95,7 +102,6 @@ export const TopBar = () => {
   return (
     <Panel className="mb-2 pt-2 pb-0 flex">
       <div className="w-1/2 fill">
-        
         <TopBarButton
           disabled={!canUndo}
           onClick={() => actions.history.undo()}
