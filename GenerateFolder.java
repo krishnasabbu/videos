@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -12,6 +13,8 @@ import java.util.*;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -74,6 +77,39 @@ public class GenerateFolder {
         return "";
     }
 
+    public String readContent(String path, String fileName) {
+        try {
+            Optional<Path> filePath = findFile(Paths.get(path), fileName);
+            if (filePath.isPresent()) {
+                String content = readFileContent(filePath.get());
+                System.out.println("File content:");
+                System.out.println(content);
+                return content;
+            } else {
+                System.out.println("File not found.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public static Optional<Path> findFile(Path directory, String fileName) throws IOException {
+        try (Stream<Path> stream = Files.walk(directory)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals(fileName))
+                    .findFirst();
+        }
+    }
+
+    // Read the content of the file
+    public static String readFileContent(Path filePath) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+            return reader.lines().collect(Collectors.joining(System.lineSeparator()));
+        }
+    }
+
     private static ObjectNode generateFolderJson(File folder) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode folderNode = mapper.createObjectNode();
@@ -102,6 +138,7 @@ public class GenerateFolder {
     }
 
     private static void addDirectory(JSONObject parentJson, Path dir) throws IOException {
+        seenPaths = new HashSet<>();
         if (Files.notExists(dir)) {
             return;
         }
@@ -147,6 +184,7 @@ public class GenerateFolder {
         JSONArray children = parentJson.getJSONArray("children");
         JSONObject fileJson = new JSONObject();
         fileJson.put("name", file.getFileName().toString());
+        fileJson.put("content", "This is text");
         children.put(fileJson);
     }
 
