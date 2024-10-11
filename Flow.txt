@@ -1,0 +1,122 @@
+ECN And XAID Flows
+
+======================================================================
+
+ECN Flow :
+
+Only one record found or empty record found in the DB
+
+flowchart TD
+    Step1[Step 1: Call to ECPR get the customer object] --> |Customer object not null| Step2
+    Step1 --> |Customer object null| Step5
+    Step2[Step 2: ECPR customer object has XAID?] --> |Call APS| APS_Call
+    APS_Call --> |APS response not null| Step3
+    APS_Call --> |APS response null| Step4
+    Step3[Step 3: Update delegate flag from APS to ECPR object] --> Step4
+    Step4[Step 4: Update the customer object in ANG DB] 
+    Step5[Step 5: Throw Exception: Request ECN does not match Hogan ECN]
+
+
+
+Multiple records found in the DB
+
+flowchart TD
+    Step1[Step 1: Call to ECPR get the customer object] --> |Customer object not null| Step2
+    Step1 --> |Customer object null| Step11
+    Step2[Step 2: Construct olbCustomerFlag based on ecprCustomer XAID] --> Step3
+    Step3[Step 3: Iterate Users from ANG DB] --> |olbCustomerFlag true & user XAID not empty| Step4
+    Step3 --> |olbCustomerFlag false or user XAID empty| Step6
+    Step4[Step 4: user XAID == ecpr XAID?] --> |Yes| Step5
+    Step4 --> |No| Step10
+    Step5[Step 5: Get delegate flag from APS and update ANG DB] --> Step6
+    Step6[Step 6: Call APS with user XAID] --> |APS customer object not null| Step7
+    Step6 --> |APS customer object null| Step10
+    Step7[Step 7: Check delegate flag Yes or No] --> |Yes| Step8
+    Step7 --> |No| Step10
+    Step8[Step 8: Update user details in ANG DB with delegate flag] --> Step9
+    Step9[Step 9: user ECN == APS ECN?] --> |Yes| Step10
+    Step9 --> |No| Step11b[Put ECN empty and update ANG DB]
+    Step10[Step 10: Suspend the record in DB]
+    Step11[Step 11: Throw exception that ECN not found]
+	
+	
+==================================================================================================
+
+XAID Flow :-
+
+One record Found or empty record found in the DB
+
+flowchart TD
+    Step0[Step 0: Make a call to ANG DB with XAID, put it in userList] --> Step1
+    Step1[Step 1: Call APS with XAID to get customer object] --> |APS response not null| Step3
+    Step1 --> |APS response null| Step2
+    Step2[Step 2: Throw exception: User not found with given XAID]
+    Step3[Step 3: APS response has ECN?] --> |ECN exists| Step5
+    Step3 --> |ECN empty| Step4
+    Step4[Step 4: Throw exception: ECN is empty in APS response object]
+    Step5[Step 5: Call ECPR with ECN from APS response] --> |ECPR response not null| Step7
+    Step5 --> |ECPR response null| Step6
+    Step6[Step 6: Throw exception: ECPR response is null for provided ECN]
+    Step7[Step 7: Validate ECPR XAID and APS XAID match] --> |XAID match| Step9
+    Step7 --> |XAID not matching| Step8
+    Step8[Step 8: Throw exception: XAIDs do not match]
+    Step9[Step 9: Update delegate flag from APS to ECPR object and return ECPR customer object] --> Step10
+    Step10[Step 10: Check if userList has one record or is empty] --> |One record| Step11
+    Step10 --> |More than one| Step12
+    Step11[Step 11: Update the details in ANG DB]
+    Step12[Step 12: Insert the details in ANG DB]
+
+
+===========================================================================================================
+
+ECN And XAID Flow :-
+
+only one record found in the DB :-
+
+flowchart TD
+    Step1[Step 1: Call ECPR with ECN to get customer object] --> |ECPR response not null| Step3
+    Step1 --> |ECPR response null| Step2
+    Step2[Step 2: Throw exception: ECN not found in Hogan]
+    Step3[Step 3: ECPR XAID equals request XAID?] --> |Equal| Step5
+    Step3 --> |Not equal| Step4
+    Step4[Step 4: Throw exception: Request XAID does not match Hogan XAID]
+    Step5[Step 5: Call APS with ECPR ECN to get delegate flag and update if found] --> Step6
+    Step6[Step 6: Update the user details in ANG DB]
+
+
+No record found in the DB :- 
+
+flowchart TD
+    Step1[Step 1: Make DB call with request ECN] --> |User list not empty| Step2
+    Step1 --> |User list empty| Step5
+    Step2[Step 2: Check if user list has one row or multiple rows] --> |One row| Step3
+    Step2 --> |Multiple rows| Step4
+    Step3[Step 3: Process one record found in DB]
+    Step4[Step 4: Process multiple records found flow when only ECN passed]
+    
+    Step5[Step 5: Make DB call with request XAID] --> |User list not empty| Step6
+    Step5 --> |User list empty| Step7
+    Step6[Step 6: Call APS with XAID to get customer object] --> |Customer found| Step8
+    Step6 --> |Customer not found| Step7
+    Step7[Step 7: Throw exception: Customer not found for given XAID]
+    
+    Step8[Step 8: APS ECN equals request ECN?] --> |Equal| Step10
+    Step8 --> |Not equal| Step9
+    Step9[Step 9: Throw exception: APS ECN and request ECN do not match]
+
+    Step10[Step 10: Call ECPR with APS ECN] --> |ECPR customer found| Step12
+    Step10 --> |ECPR customer not found| Step11
+    Step11[Step 11: Throw exception: ECPR details not found for given ECN]
+    Step12[Step 12: Update delegate flag in ECPR object from APS object] --> Step13
+    Step13[Step 13: Update user details in ANG DB]
+
+    Step14[Step 14: Call ECPR with ECN to get customer object] --> |Customer object not null| Step3
+    Step14 --> |Customer object null| Step15
+    Step15[Step 15: Throw exception: ECN not found in Hogan]
+    
+    Step16[Step 16: ECPR XAID equals request XAID?] --> |Equal| Step18
+    Step16 --> |Not equal| Step17
+    Step17[Step 17: Throw exception: Request XAID does not match Hogan XAID]
+    
+    Step18[Step 18: Call APS with ECPR ECN to get delegate flag and update] --> Step19
+    Step19[Step 19: Insert user details in ANG DB]
