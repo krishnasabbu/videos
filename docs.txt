@@ -1,0 +1,22 @@
+Alert ID: 12345
+Alert Name: Payment Failure Notification
+Channel: Email, SMS, Push
+Business Rule: Triggered when a payment fails due to insufficient balance or network issues.
+Action: Notify the customer immediately with retry options.
+
+---
+
+Alert ID: 67890
+Alert Name: Credit Card Bill Due Reminder
+Channel: Email, Secure Inbox
+Business Rule: Sent 3 days before the due date if the outstanding amount is greater than $100.
+Action: Remind the customer with a direct payment link.
+
+---
+
+Alert ID: 54321
+Alert Name: Unusual Login Activity
+Channel: Push, Secure Inbox
+Business Rule: Sent when a login occurs from a new device or location.
+Action: Prompt the customer to verify the activity.
+
